@@ -18,6 +18,9 @@ Encryption Standard (AES) Key Wrap Algorithm (keywrap) specified in RFC
 The implementation does not contain its own internal storage of
 unwrapped keys, but expect to be fed data to be wrapped or unwrapped.
 
+This implementation will not support 192 bit keys, only 128 and 256 bit
+keys. The AES core used does not support 192 bit keys.
+
 
 ## Implementation results ##
 
