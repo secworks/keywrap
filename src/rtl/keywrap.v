@@ -3,6 +3,11 @@
 // keywrap.v
 // ---------
 // RFC3394 keywrap core.
+// The core works on blocks of 64 bits. The supported key lengths
+// are 128 and 256 bits.
+//
+// TODO: Refactor this to have the real functionality in a
+// keywrap_core module and the API in this module.
 //
 //
 // Author: Joachim Strombergson
@@ -62,7 +67,7 @@ module keywrap(
   localparam CTRL_INIT_BIT    = 0;
   localparam CTRL_NEXT_BIT    = 1;
 
-  localparam ADDR_STATUS      = 8'h0a;
+  localparam ADDR_STATUS      = 8'h09;
   localparam STATUS_READY_BIT = 0;
   localparam STATUS_VALID_BIT = 1;
 
@@ -81,17 +86,13 @@ module keywrap(
 
   localparam ADDR_BLOCK0      = 8'h20;
   localparam ADDR_BLOCK1      = 8'h21;
-  localparam ADDR_BLOCK2      = 8'h22;
-  localparam ADDR_BLOCK3      = 8'h23;
 
   localparam ADDR_RESULT0     = 8'h30;
   localparam ADDR_RESULT1     = 8'h31;
-  localparam ADDR_RESULT2     = 8'h32;
-  localparam ADDR_RESULT3     = 8'h33;
 
   localparam CORE_NAME0       = 32'h6b657977; // "keyw"
   localparam CORE_NAME1       = 32'h72617020; // "rap "
-  localparam CORE_VERSION     = 32'h302e3031; // "0.01"
+  localparam CORE_VERSION     = 32'h302e3032; // "0.02"
 
 
   //----------------------------------------------------------------
@@ -115,10 +116,6 @@ module keywrap(
   reg          block0_we;
   reg [31 : 0] block1_reg;
   reg          block1_we;
-  reg [31 : 0] block2_reg;
-  reg          block2_we;
-  reg [31 : 0] block3_reg;
-  reg          block3_we;
 
   reg [31 : 0] key0_reg;
   reg          key0_we;
@@ -137,9 +134,9 @@ module keywrap(
   reg [31 : 0] key7_reg;
   reg          key7_we;
 
-  reg [127 : 0] result_reg;
-  reg           valid_reg;
-  reg           ready_reg;
+  reg [63 : 0] result_reg;
+  reg          valid_reg;
+  reg          ready_reg;
 
 
   //----------------------------------------------------------------
@@ -147,6 +144,12 @@ module keywrap(
   //----------------------------------------------------------------
   reg [31 : 0]   tmp_read_data;
   reg            tmp_error;
+
+  reg [63 : 0]   a_reg;
+  reg [63 : 0]   a_new;
+  reg            a_we;
+  reg            a_init;
+  reg            a_next;
 
   wire           core_encdec;
   wire           core_init;
@@ -208,8 +211,6 @@ module keywrap(
         begin
           block0_reg <= 32'h00000000;
           block1_reg <= 32'h00000000;
-          block2_reg <= 32'h00000000;
-          block3_reg <= 32'h00000000;
 
           key0_reg   <= 32'h00000000;
           key1_reg   <= 32'h00000000;
@@ -300,16 +301,6 @@ module keywrap(
             begin
               block1_reg <= write_data;
             end
-
-          if (block2_we)
-            begin
-              block2_reg <= write_data;
-            end
-
-          if (block3_we)
-            begin
-              block3_reg <= write_data;
-            end
         end
     end // reg_update
 
@@ -347,6 +338,21 @@ module keywrap(
         begin
           next_new = 0;
           next_we  = 1;
+        end
+    end
+
+  //----------------------------------------------------------------
+  // Datapath. Or a register logic, if we do this separately.
+  //----------------------------------------------------------------
+  always @*
+    begin
+      a_new = 64'h0000000000000000;
+      a_we  = 1'b0;
+
+      if (a_init)
+        begin
+          a_new = 64'ha6a6a6a6a6a6a6a6;
+          a_we  = 1'b1;
         end
     end
 
@@ -578,6 +584,18 @@ module keywrap(
             end
         end
     end // addr_decoder
+
+
+  //----------------------------------------------------------------
+  // keywrap_ctrl
+  //
+  // Control FSM for the keyrap core.
+  //----------------------------------------------------------------
+  always @*
+    begin : keywrap_ctrl
+
+    end
+
 endmodule // keywrap
 
 //======================================================================
