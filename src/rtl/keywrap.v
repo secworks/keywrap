@@ -2,12 +2,9 @@
 //
 // keywrap.v
 // ---------
-// RFC3394 keywrap core.
+// top level wrapper for the RFC3394 keywrap core.
 // The core works on blocks of 64 bits. The supported key lengths
 // are 128 and 256 bits.
-//
-// TODO: Refactor this to have the real functionality in a
-// keywrap_core module and the API in this module.
 //
 //
 // Author: Joachim Strombergson
@@ -145,12 +142,6 @@ module keywrap(
   reg [31 : 0]   tmp_read_data;
   reg            tmp_error;
 
-  reg [63 : 0]   a_reg;
-  reg [63 : 0]   a_new;
-  reg            a_we;
-  reg            a_init;
-  reg            a_next;
-
   wire           core_encdec;
   wire           core_init;
   wire           core_next;
@@ -181,22 +172,22 @@ module keywrap(
   //----------------------------------------------------------------
   // core instantiation.
   //----------------------------------------------------------------
-  aes_core aes_core_inst(
-                         .clk(clk),
-                         .reset_n(reset_n),
+  keywrap_core keywrap_core_inst(
+                                 .clk(clk),
+                                 .reset_n(reset_n),
 
-                         .encdec(core_encdec),
-                         .init(core_init),
-                         .next(core_next),
-                         .ready(core_ready),
+                                 .encdec(core_encdec),
+                                 .init(core_init),
+                                 .next(core_next),
+                                 .ready(core_ready),
 
-                         .key(core_key),
-                         .keylen(core_keylen),
+                                 .key(core_key),
+                                 .keylen(core_keylen),
 
-                         .block(core_block),
-                         .result(core_result),
-                         .result_valid(core_valid)
-                        );
+                                 .block(core_block),
+                                 .result(core_result),
+                                 .result_valid(core_valid)
+                                );
 
 
   //----------------------------------------------------------------
@@ -226,7 +217,7 @@ module keywrap(
           encdec_reg <= 0;
           keylen_reg <= 0;
 
-          result_reg <= 128'h00000000000000000000000000000000;
+          result_reg <= 64'h0000000000000000;
           valid_reg  <= 0;
           ready_reg  <= 0;
         end
@@ -338,21 +329,6 @@ module keywrap(
         begin
           next_new = 0;
           next_we  = 1;
-        end
-    end
-
-  //----------------------------------------------------------------
-  // Datapath. Or a register logic, if we do this separately.
-  //----------------------------------------------------------------
-  always @*
-    begin
-      a_new = 64'h0000000000000000;
-      a_we  = 1'b0;
-
-      if (a_init)
-        begin
-          a_new = 64'ha6a6a6a6a6a6a6a6;
-          a_we  = 1'b1;
         end
     end
 
@@ -584,17 +560,6 @@ module keywrap(
             end
         end
     end // addr_decoder
-
-
-  //----------------------------------------------------------------
-  // keywrap_ctrl
-  //
-  // Control FSM for the keyrap core.
-  //----------------------------------------------------------------
-  always @*
-    begin : keywrap_ctrl
-
-    end
 
 endmodule // keywrap
 
